@@ -88,11 +88,11 @@ while (dist > EPSILON and abs(prev-dist) > EPSILON/100.):
   for i in range(len(th)):
     # cálculo de la cinemática inversa:
     # índice de la articulación a modificar (de última a primera)
-    j = len(th) - 1 - i
+    j = len(th) - 1 - i 
 
     # posiciones actuales de orígenes, articulación j, efector final y objetivo
     Oj = O[-1] # lista de [x,y] de cada origen
-    pj = np.array(Oj[j]) # posición de la articulación j
+    pj = np.array(Oj[j]) # posición de la articulación j que estamos modificando
     pe = np.array(Oj[-1]) # posición del efector final
     pt = np.array(objetivo) # posición objetivo
 
@@ -101,7 +101,7 @@ while (dist > EPSILON and abs(prev-dist) > EPSILON/100.):
     v2 = pt - pj # vector hacia objetivo
 
     # evitar división por cero
-    if np.linalg.norm(v1) < 1e-8 or np.linalg.norm(v2) < 1e-8:
+    if np.linalg.norm(v1) < EPSILON or np.linalg.norm(v2) < EPSILON: 
       O.append(cin_dir(th,a))
       continue
 
