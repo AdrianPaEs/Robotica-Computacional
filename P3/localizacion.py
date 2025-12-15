@@ -1,13 +1,6 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
+#! /usr/bin/env python3
 
-# Rob�tica Computacional 
-# Grado en Ingenier�a Inform�tica (Cuarto)
-# Pr�ctica 5: Simulaci�n de robots m�viles holon�micos y no holon�micos.
-
-#localizacion.py
-# Nombre: Adrián Padrón Espinosa
-# Correo electrónico: alu010132326@ull.edu.es
+# localizacion.py CORREGIDO
 
 import sys
 from math import *
@@ -15,9 +8,10 @@ from robot import robot
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import datetime
+import time 
+
 # ******************************************************************************
-# Declaraci�n de funciones
+# Declaración de funciones
 
 def distancia(a,b):
   # Distancia entre dos puntos (admite poses)
@@ -32,8 +26,10 @@ def angulo_rel(pose,p):
 
 def mostrar(objetivos,ideal,trayectoria):
   # Mostrar objetivos y trayectoria:
-  #plt.ion() # modo interactivo
-  # Fijar los bordes del gr�fico
+  plt.figure('Trayectoria')
+  plt.clf()
+  plt.ion() # modo interactivo: show no bloqueante
+  # Fijar los bordes del gráfico
   objT   = np.array(objetivos).T.tolist()
   trayT  = np.array(trayectoria).T.tolist()
   ideT   = np.array(ideal).T.tolist()
@@ -54,29 +50,35 @@ def mostrar(objetivos,ideal,trayectoria):
   objT   = np.array(objetivos).T.tolist()
   plt.plot(objT[0],objT[1],'-.o')
   plt.show()
-  input()
-  plt.clf()
 
-def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
-  # Buscar la localizaci�n m�s probable del robot, a partir de su sistema
-  # sensorial, dentro de una regi�n cuadrada de centro "centro" y lado "2*radio".
+def localizacion(balizas, real, ideal, centro, radio, mostrar=False):
+  imagen = []
+  error = 100  
+  realSense = real.sense(balizas)
 
-  imagen=[]
-  for (i=-radio, incremento, +radio)
-    for (j=-radio, incremento, +radio)
-      ideal.setPos(centro.x+i, centro.y+j)
-      imagen = measurement_prob.append(measurement_prob(ideal.sense(balizas), real.sense(balizas)))
-      if (measurement_prob(ideal.sense(balizas), real.sense(balizas)) > 0.5):
-        ideal.setPos(centro.x+i, centro.y+j)
-        break
-  # Mejor posición encontrada
-
-  ideal.setPos(centro.x+i, centro.y+j)
-
-
+  if not mostrar:
+    radio = 0.2*radio
+  
+  # NumPy arange maneja floats correctamente
+  for i in np.arange(-radio, radio, 0.04):
+    imagen.append([])
+    for j in np.arange(-radio, radio, 0.04):
+      ideal.set(centro[0] + i, centro[1] + j, realSense[-1])
+      errorPosActual = ideal.measurement_prob(realSense, balizas)
+      imagen[-1].append(errorPosActual)
+      
+      if errorPosActual < error:
+        error = errorPosActual
+        pose = ideal.pose()
+  
+  if 'pose' in locals(): # Verificacion de seguridad
+      ideal.set(*pose)
+      print("ERROR", error)
 
   if mostrar:
-    #plt.ion() # modo interactivo
+    plt.figure('Localizacion')
+    plt.clf()
+    plt.ion() # modo interactivo
     plt.xlim(centro[0]-radio,centro[0]+radio)
     plt.ylim(centro[1]-radio,centro[1]+radio)
     imagen.reverse()
@@ -87,22 +89,22 @@ def localizacion(balizas, real, ideal, centro, radio, mostrar=0):
     plt.plot(ideal.x,ideal.y,'D',c='#ff00ff',ms=10,mew=2)
     plt.plot(real.x, real.y, 'D',c='#00ff00',ms=10,mew=2)
     plt.show()
-    input()
-    plt.clf()
 
 # ******************************************************************************
 
-# Definici�n del robot:
-P_INICIAL = [0.,4.,0.] # Pose inicial (posici�n y orientacion)
+# Definición del robot:
+P_INICIAL = [0.,4.,0.] # Pose inicial (posición y orientacion)
+P_INICIAL_IDEAL = [2, 2, 0]  # Pose inicial del ideal
 V_LINEAL  = .7         # Velocidad lineal    (m/s)
-V_ANGULAR = 140.       # Velocidad angular   (�/s)
-FPS       = 10.        # Resoluci�n temporal (fps)
+V_ANGULAR = 140.       # Velocidad angular   (º/s)
+FPS       = 10.        # Resolución temporal (fps)
+MOSTRAR   = True       # Si se quiere gráficas de localización y trayectorias
 
 HOLONOMICO = 1
 GIROPARADO = 0
 LONGITUD   = .2
 
-# Definici�n de trayectorias:
+# Definición de trayectorias:
 trayectorias = [
     [[1,3]],
     [[0,2],[4,2]],
@@ -111,35 +113,37 @@ trayectorias = [
     [[2+2*sin(.8*pi*i),2+2*cos(.8*pi*i)] for i in range(5)]
     ]
 
-# Definici�n de los puntos objetivo:
+# Definición de los puntos objetivo:
 if len(sys.argv)<2 or int(sys.argv[1])<0 or int(sys.argv[1])>=len(trayectorias):
-  sys.exit(sys.argv[0]+" <indice entre 0 y "+str(len(trayectorias)-1)+">")
+  sys.exit(f"{sys.argv[0]} <indice entre 0 y {len(trayectorias)-1}>")
 objetivos = trayectorias[int(sys.argv[1])]
 
-# Definici�n de constantes:
+# Definición de constantes:
 EPSILON = .1                # Umbral de distancia
 V = V_LINEAL/FPS            # Metros por fotograma
 W = V_ANGULAR*pi/(180*FPS)  # Radianes por fotograma
 
 ideal = robot()
-ideal.set_noise(0,0,.1)   # Ruido lineal / radial / de sensado
-ideal.set(*P_INICIAL)     # operador 'splat'
+ideal.set_noise(0,0,0)   # Ruido lineal / radial / de sensado
+ideal.set(*P_INICIAL_IDEAL)     # operador 'splat'
 
 real = robot()
 real.set_noise(.01,.01,.1)  # Ruido lineal / radial / de sensado
 real.set(*P_INICIAL)
 
-random.seed(0)
-tray_ideal = [ideal.pose()]  # Trayectoria percibida
 tray_real = [real.pose()]     # Trayectoria seguida
 
 tiempo  = 0.
 espacio = 0.
-#random.seed(0)
-random.seed(datetime.now())
-# Localizar inicialmente al robot
-localizacion(objetivos, real, ideal, ideal.pose(), 5, mostrar=1) 
-# Como poner Copilot en español en Visual Studio Code
+random.seed(0)
+#random.seed(time.time())
+tic = time.time()
+
+# Localización inicial
+
+tray_ideal = [ideal.pose()]  # Trayectoria percibida
+
+distanciaObjetivos = []
 for punto in objetivos:
   while distancia(tray_ideal[-1],punto) > EPSILON and len(tray_ideal) <= 1000:
     pose = ideal.pose()
@@ -159,20 +163,36 @@ for punto in objetivos:
     else:
       ideal.move_triciclo(w,v,LONGITUD)
       real.move_triciclo(w,v,LONGITUD)
-    tray_ideal.append(ideal.pose())
     tray_real.append(real.pose())
-    
-    if(real.sense, ideal.sense != 0):
-      localizacion(balizas, real, ideal, centro, radio, mostrar=0)
 
-    
+    # Decidir nueva localización ⇒ nuevo ideal
+
+    tray_ideal.append(ideal.pose())
+
+    if MOSTRAR:
+      mostrar(objetivos, tray_ideal, tray_real)  # Representación gráfica
+      input() # Pausa para ver la gráfica
+
     espacio += v
     tiempo  += 1
+  # Antes de pasar a un nuevo punto apuntamos distancia a este objetivo
+  distanciaObjetivos.append(distancia(tray_real[-1], punto))
 
+
+toc = time.time()
 if len(tray_ideal) > 1000:
-  print ("<!> Trayectoria muy larga - puede que no se haya alcanzado la posicion final.")
-print ("Recorrido: "+str(round(espacio,3))+"m / "+str(tiempo/FPS)+"s")
-print ("Distancia real al objetivo: "+\
-    str(round(distancia(tray_real[-1],objetivos[-1]),3))+"m")
-mostrar(objetivos,tray_ideal,tray_real)  # Representaci�n gr�fica
+  print ("<!> Trayectoria muy larga ⇒ quizás no alcanzada posición final.")
+print(f"Recorrido: {espacio:.3f}m / {tiempo/FPS}s")
+print(f"Distancia real al objetivo final: {distanciaObjetivos[-1]:.3f}m")
+print(f"Suma de distancias a objetivos: {np.sum(distanciaObjetivos):.3f}m")
+print(f"Tiempo real invertido: {toc-tic:.3f}sg")
 
+desviacion = np.sum(np.abs(np.subtract(tray_real, tray_ideal)))
+print(f"Desviacion de las trayectorias: {desviacion:.3f}")
+
+
+if MOSTRAR:
+  mostrar(objetivos, tray_ideal, tray_real)  # Representación gráfica
+  input() # Pausa para ver la gráfica
+
+print(f"Resumen: {toc-tic:.3f} {desviacion:.3f} {np.sum(distanciaObjetivos):.3f}")
