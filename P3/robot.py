@@ -1,11 +1,8 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
+#! /usr/bin/env python3
 
-# Rob�tica Computacional 
-# Grado en Ingenier�a Inform�tica (Cuarto)
+# Robótica Computacional
+# Grado en Ingeniería Informática (Cuarto)
 # Clase robot
-# Nombre: Adrián Padrón Espinosa
-# Correo electrónico: alu010132326@ull.edu.es
 
 from math import *
 import random
@@ -14,7 +11,7 @@ import copy
 
 class robot:
   def __init__(self):
-    # Inicializacion de pose y par�metros de ru�do
+    # Inicializacion de pose y parámetros de ruído
     self.x             = 0.
     self.y             = 0.
     self.orientation   = 0.
@@ -38,7 +35,7 @@ class robot:
     while self.orientation < -pi: self.orientation += 2*pi
 
   def set_noise(self, new_f_noise, new_t_noise, new_s_noise):
-    # Modificar los par�metros de ru�do
+    # Modificar los parámetros de ruído
     self.forward_noise = float(new_f_noise);
     self.turn_noise    = float(new_t_noise);
     self.sense_noise   = float(new_s_noise);
@@ -52,14 +49,17 @@ class robot:
     return np.linalg.norm(np.subtract([self.x,self.y],landmark)) \
                                         + random.gauss(0.,noise)
 
-  def sense(self, landmarks):
+  def senseDistance(self, landmarks):
     # Calcular las distancias a cada una de las balizas
     d = [self.sense1(l,self.sense_noise) for l in landmarks]
-    d.append(self.orientation + random.gauss(0.,self.sense_noise))
     return d
 
+  def senseAngle(self, landmarks):
+    # Calcular las distancias a cada una de las balizas
+    return self.orientation + random.gauss(0.,self.sense_noise)
+
   def move(self, turn, forward):
-    # Modificar pose del robot (holon�mico)
+    # Modificar pose del robot (holonómico)
     self.orientation += float(turn) + random.gauss(0., self.turn_noise)
     while self.orientation >  pi: self.orientation -= 2*pi
     while self.orientation < -pi: self.orientation += 2*pi
@@ -77,30 +77,6 @@ class robot:
     self.x += cos(self.orientation) * dist
     self.y += sin(self.orientation) * dist
 
-  def Gaussian(self, mu, sigma, x):
-    # Calcular la probabilidad de 'x' para una distribuci�n normal
-    # de media 'mu' y desviaci�n t�pica 'sigma'
-    if sigma:
-      return exp(-(((mu-x)/sigma)**2)/2)/(sigma*sqrt(2*pi))
-    else:
-      return 0
-
-  def measurement_prob(self, measurements, landmarks):
-    # Calcular la probabilidad de una medida.
-    self.weight = 0.
-    n=0
-    for i in range(len(measurements)-1):
-      self.weight += abs(self.sense1(landmarks[i],0) -measurements[i])
-      n=n+1
-    diff = self.orientation - measurements[-1]
-    while diff >  pi: diff -= 2*pi
-    while diff < -pi: diff += 2*pi
-    self.weight = self.weight + abs(diff) 
-    self.weight=self.weight/(n+1)
-    return self.weight
-
   def __repr__(self):
-    # Representaci�n de la clase robot
-    return '[x=%.6s y=%.6s orient=%.6s]' % \
-            (str(self.x), str(self.y), str(self.orientation))
-
+    # Representación de la clase robot
+    return f'[x={self.x:.6f} y={self.y:.6f} orient={self.orientation:.6f}]'

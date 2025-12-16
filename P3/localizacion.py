@@ -1,6 +1,11 @@
 #! /usr/bin/env python3
 
-# localizacion.py CORREGIDO
+# Robótica Computacional
+# Grado en Ingeniería Informática (Cuarto)
+# Práctica 5:
+#     Simulación de robots móviles holonómicos y no holonómicos.
+
+#localizacion.py
 
 import sys
 from math import *
@@ -8,8 +13,7 @@ from robot import robot
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-import time 
-
+import time
 # ******************************************************************************
 # Declaración de funciones
 
@@ -52,28 +56,12 @@ def mostrar(objetivos,ideal,trayectoria):
   plt.show()
 
 def localizacion(balizas, real, ideal, centro, radio, mostrar=False):
-  imagen = []
-  error = 100  
-  realSense = real.sense(balizas)
+  # Buscar la localización más probable del robot, a partir de su sistema
+  # sensorial, dentro de una región cuadrada de centro "centro" y lado "2*radio".
 
-  if not mostrar:
-    radio = 0.2*radio
-  
-  # NumPy arange maneja floats correctamente
-  for i in np.arange(-radio, radio, 0.04):
-    imagen.append([])
-    for j in np.arange(-radio, radio, 0.04):
-      ideal.set(centro[0] + i, centro[1] + j, realSense[-1])
-      errorPosActual = ideal.measurement_prob(realSense, balizas)
-      imagen[-1].append(errorPosActual)
-      
-      if errorPosActual < error:
-        error = errorPosActual
-        pose = ideal.pose()
-  
-  if 'pose' in locals(): # Verificacion de seguridad
-      ideal.set(*pose)
-      print("ERROR", error)
+
+
+
 
   if mostrar:
     plt.figure('Localizacion')
