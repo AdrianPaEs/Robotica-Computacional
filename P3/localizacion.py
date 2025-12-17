@@ -55,12 +55,74 @@ def mostrar(objetivos,ideal,trayectoria):
   plt.plot(objT[0],objT[1],'-.o')
   plt.show()
 
+# IMPLEMENTACIÓN
+
 def localizacion(balizas, real, ideal, centro, radio, mostrar=False):
   # Buscar la localización más probable del robot, a partir de su sistema
   # sensorial, dentro de una región cuadrada de centro "centro" y lado "2*radio".
 
+  # 1. Configuración de la búsqueda
+  imagen = [] # Matriz de probabilidades para visualizar
 
+  if radio > 1.0:
+      resolucion = 0.10  # 10 cm si buscamos en todo el mapa 
+  else:
+      resolucion = 0.02  # 2 cm si es seguimiento fino
+  
+  # Definimos los límites de la caja de búsqueda
+  min_x = centro[0] - radio
+  max_x = centro[0] + radio
+  min_y = centro[1] - radio
+  max_y = centro[1] + radio
+  
+  # Dimensiones de la rejilla
+  steps_x = int((max_x - min_x) / resolucion)
+  steps_y = int((max_y - min_y) / resolucion)
 
+  # 2. Obtener mediciones reales
+  medidas_reales = real.senseDistance(balizas)
+  sigma = real.sense_noise # Ruido del sensor (usado para la Gaussiana)
+
+  mejor_probabilidad = -1
+  mejor_posicion = [ideal.x, ideal.y] # Por defecto mantenemos la anterior
+
+  # 3. Iterar sobre la rejilla
+    # Iteramos en Y primero para construir la imagen fila a fila
+  for i in range(steps_y):
+    fila = []
+    y_hipotetica = min_y + i * resolucion
+    
+    for j in range(steps_x):
+      x_hipotetica = min_x + j * resolucion
+      
+      # Probabilidad acumulada en este punto (inicialmente 1)
+      prob_punto = 1.0
+      
+      # Calculamos la probabilidad combinada respecto a todas las balizas
+      for k, baliza in enumerate(balizas):
+        dist_baliza_real = medidas_reales[k]
+        dist_baliza_hipotetica = distancia([x_hipotetica, y_hipotetica], baliza)
+        
+        # Diferencia entre lo que veo y lo que debería ver
+        error = dist_baliza_real - dist_baliza_hipotetica
+        
+        # Likelihood = exp( - (error^2) / (2 * variance) )
+        likelihood = exp(-(error**2) / (2 * sigma**2))
+        
+        prob_punto *= likelihood
+      
+      # Guardamos probabilidad en la fila para pintar luego
+      fila.append(prob_punto)
+      
+      # Comprobamos si es la mejor posición encontrada hasta ahora
+      if prob_punto > mejor_probabilidad:
+        mejor_probabilidad = prob_punto
+        mejor_posicion = [x_hipotetica, y_hipotetica]
+    
+    imagen.append(fila)
+
+  # 4. Actualizar el robot IDEAL con la mejor posición encontrada
+  ideal.set(mejor_posicion[0], mejor_posicion[1], ideal.orientation)
 
 
   if mostrar:
@@ -128,7 +190,7 @@ random.seed(0)
 tic = time.time()
 
 # Localización inicial
-
+localizacion(objetivos, real, ideal, [ideal.x, ideal.y], 0.2, mostrar=False)
 tray_ideal = [ideal.pose()]  # Trayectoria percibida
 
 distanciaObjetivos = []
@@ -154,12 +216,9 @@ for punto in objetivos:
     tray_real.append(real.pose())
 
     # Decidir nueva localización ⇒ nuevo ideal
+    localizacion(objetivos, real, ideal, [ideal.x, ideal.y], 0.2, mostrar=False)
 
     tray_ideal.append(ideal.pose())
-
-    if MOSTRAR:
-      mostrar(objetivos, tray_ideal, tray_real)  # Representación gráfica
-      input() # Pausa para ver la gráfica
 
     espacio += v
     tiempo  += 1
