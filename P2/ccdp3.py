@@ -57,6 +57,44 @@ def cin_dir(th,a):
     o.append([tmp[0],tmp[1]])
   return o
 
+def ArticulacionRotacional(O, i, delta): 
+    # Cálculo de la articulacion rotacional
+    alpha2 = atan2(objetivo[1]-O[-1][i][1], objetivo[0]-O[-1][i][0])
+    alpha1 = atan2(O[-1][-1][1]-O[-1][i][1], O[-1][-1][0]-O[-1][i][0])
+
+    delta = alpha2 - alpha1 # alfa 1 - alfa 2
+    th[i] += delta
+
+    # Normalización de ángulos al rango [-pi, pi]
+    while th[i] > pi: 
+      th[i] -= 2*pi
+    while th[i] < -pi:
+      th[i] += 2*pi
+    
+    # Limitar a los ángulos máximos y mínimos
+    if (th[i] > np.radians(limit_superior[i])): 
+      th[i] = np.radians(limit_superior[i])
+    if (th[i] < np.radians(limit_inferior[i])):
+      th[i] = np.radians(limit_inferior[i])
+
+    return th[i]
+
+def ArticulacionPrismatica(O, i):
+    # Cálculo de la articulacion prismática
+    u = np.subtract(objetivo,O[-1][-1])
+    w = sum(th[:i+1])
+    v = [cos(w), sin(w)]
+
+    distancia = np.dot(u,v)
+    a[i] += distancia
+
+    # Limitar a los valores máximos y mínimos
+    if(a[i] > limit_superior[i]):
+      a[i] = limit_superior[i]
+    if(a[i] < limit_inferior[i]):
+      a[i] = limit_inferior[i]
+    return a[i]
+
 # ******************************************************************************
 # Cálculo de la cinemática inversa de forma iterativa por el método CCD
 
@@ -65,6 +103,12 @@ th=[0.,0.,0.]
 a =[5.,5.,5.]
 L = sum(a) # variable para representación gráfica
 EPSILON = .01
+
+# Tipo de articulaciones: 0 = rotacional, 1 = prismática
+tipo_articulacion = [0,1,1] 
+# Límites de las articulaciones 
+limit_superior = [90, 10, 90] 
+limit_inferior = [-90, 0, -90] 
 
 #plt.ion() # modo interactivo
 
@@ -85,35 +129,13 @@ while (dist > EPSILON and abs(prev-dist) > EPSILON/100.):
   prev = dist
   O=[cin_dir(th,a)]
   # Para cada combinación de articulaciones:
-  for i in range(len(th)):
+  for i in range(len(th)-1,-1,-1):
     # cálculo de la cinemática inversa:
-    # índice de la articulación a modificar (de última a primera)
-    j = len(th) - 1 - i 
-
-    # posiciones actuales de orígenes, articulación j, efector final y objetivo
-    Oj = O[-1] # lista de [x,y] de cada origen
-    pj = np.array(Oj[j]) # posición de la articulación j que estamos modificando
-    pe = np.array(Oj[-1]) # posición del efector final
-    pt = np.array(objetivo) # posición objetivo
-
-    # vectores desde la articulación j
-    v1 = pe - pj # vector hacia efector
-    v2 = pt - pj # vector hacia objetivo
-
-    # evitar división por cero
-    if np.linalg.norm(v1) < EPSILON or np.linalg.norm(v2) < EPSILON: 
-      O.append(cin_dir(th,a))
-      continue
-
-    # normalizar los vectores
-    dot = np.dot(v1, v2) # producto escalar
-    cross = v1[0]*v2[1] - v1[1]*v2[0] # producto vectorial en 2D
-    ang = atan2(cross, dot) # ángulo entre v1 y v2
-
-    # actualizamos el ángulo de la articulación j
-    th[j] += ang
-
-    O.append(cin_dir(th,a))
+      if tipo_articulacion[i] == 0: # Articulación rotacional
+        th[i] = ArticulacionRotacional(O, i, 0)
+      else:               # Articulación prismática
+        a[i] = ArticulacionPrismatica(O, i)
+      O.append(cin_dir(th,a)) 
 
   dist = np.linalg.norm(np.subtract(objetivo,O[-1][-1]))
   print ("\n- Iteracion " + str(iteracion) + ':')
