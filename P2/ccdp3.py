@@ -81,9 +81,9 @@ def ArticulacionRotacional(O, i, delta):
 
 def ArticulacionPrismatica(O, i):
     # Cálculo de la articulacion prismática
-    u = np.subtract(objetivo,O[-1][-1])
-    w = sum(th[:i+1])
-    v = [cos(w), sin(w)]
+    u = np.subtract(objetivo,O[-1][-1]) # Vector desde el extremo al objetivo 
+    w = sum(th[:i+1]) # Ángulo total hasta la articulación i
+    v = [cos(w), sin(w)] # Vector de la dirección de la articulación i
 
     distancia = np.dot(u,v)
     a[i] += distancia
